@@ -9,9 +9,8 @@ import threading
 import datetime
 import websockets
 import asyncio
-import json
-import mariadb
 from socket import *
+# Imports the Google Cloud client library 
 from google.cloud import vision 
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'vision_api_key.json'
@@ -19,15 +18,9 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'vision_api_key.json'
 # Instantiates a client 
 client = vision.ImageAnnotatorClient()
 
-conn = mariadb.connect( 
-    user='hunny', 
-    password='hunny', 
-    host='ec2-3-36-124-21.ap-northeast-2.compute.amazonaws.com', 
-    port=3306,
-    database='COVID'
-)
-
-cur = conn.cursor()
+HOST = '127.0.0.1'
+PORT = 8025
+BUFSIZE = 1024
 
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
@@ -41,7 +34,7 @@ h, w = temp_img.shape
 ch_h, ch_w = ch_img.shape[0:2]
 ch_pt = (0, 0)
 
-async def processVisionApi(content):
+def processVisionApi(content):
     textArr = []
     
     image = vision.Image(content=content) 
@@ -104,6 +97,9 @@ async def processVisionApi(content):
                 text_nickname = '없음'
                 text_content = originText
                 text_link = '없음'
+        # print('닉네임 : ', text_nickname)
+        # print('내용 : ', text_content)
+        # print('링크 : ', text_link)
     else :
         text_nickname = '없음'
         text_link = '없음'
@@ -111,41 +107,25 @@ async def processVisionApi(content):
     
     now = datetime.datetime.now()
     now = now.strftime('%Y-%m-%d %H:%M:%S')
-    # text_json = {
-    #     "text_origin" : originText,
-    #     "text_simbol" : text_simbol,
-    #     "text_nickname" : text_nickname,
-    #     "text_ch" : text_ch,
-    #     "text_link" : text_link,
-    #     "text_content" : text_content,
-    #     "text_time" : now,
-    # }
-    text_json = '{"origin_data": "' + originText + '","simbol": "' + text_simbol + '","nickname": "' + text_nickname + '","chanel": "' + text_ch + '","link": "' + text_link + '","content": "' + text_content + '","time": "' + now + '"}'
+    text_json = {
+        "text_origin" : originText,
+        "text_simbol" : text_simbol,
+        "text_nickname" : text_nickname,
+        "text_ch" : text_ch,
+        "text_link" : text_link,
+        "text_content" : text_content,
+        "text_time" : now,
+    }
     # print(text_json)
-    sql = 'insert into mapleSpeaker(game, server,`time`, simbol, nickname, chanel, link, content, origin_data)'
-    sql += 'values("메이플", "스카니아","'
-    sql += now + '", "'
-    sql += text_simbol + '", "' 
-    sql += text_nickname + '", "'
-    sql += text_ch + '", "'
-    sql += text_link + '", "'
-    sql += text_content + '", "'
-    sql += originText+ '")'
-    # sql = 'insert into mapleSpeaker(game, server,`time`, simbol, nickname, chanel, link, content, origin_data) values("메이플",	"스카니아",	now(),	"testz",	"test",	"test",	"test",	"test",	"origin")'
-    print (sql)
-    cur.execute(sql)
-    conn.commit()
     return text_json
 
 def processVisionApiAndWebSocket(content) :
     async def my_connect(content):
-        # async with websockets.connect("ws://localhost:8024/websocket") as websocket:
-        async with websockets.connect("ws://ec2-3-36-124-21.ap-northeast-2.compute.amazonaws.com:8024/websocket") as websocket:
+        async with websockets.connect("ws://localhost:8024/websocket") as websocket:
             text_json = await processVisionApi(content)
-            print(text_json)
             await websocket.send(text_json)
         
-    asyncio.run(my_connect(content))
+    asyncio.get_event_loop().run_until_complete(my_connect(content))
     
 
 

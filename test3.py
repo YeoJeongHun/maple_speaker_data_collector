@@ -1,22 +1,19 @@
 
 
-from socket import *
-from select import select
+import mariadb
 import sys
 
-HOST = '127.0.0.1'
-PORT = 8025
-BUFSIZE = 1024
+conn = mariadb.connect( 
+    user='hunny', 
+    password='hunny', 
+    host='ec2-3-36-124-21.ap-northeast-2.compute.amazonaws.com', 
+    port=3306,
+    database='COVID'
+)
 
-clientSocket = socket(AF_INET, SOCK_STREAM)
+cur = conn.cursor()
 
-try:
-    clientSocket.connect((HOST, PORT))
-    clientSocket.sendall(bytes('hihihihihihihihi\n', 'UTF-8'))
-    print('send\n')
-    
-    # data = clientSocket.recv(1024)
-    # print(data.decode())
-    clientSocket.close()
-except Exception as e :
-    print(e)
+sql = 'insert into mapleSpeaker(game, server,`time`, simbol, nickname, chanel, link, content, origin_data) values("메이플",	"스카니아",	now(),	"testz",	"test",	"test",	"test",	"test",	"origin")'
+
+cur.execute(sql)
+conn.commit()
