@@ -17,3 +17,4 @@ sql = 'insert into mapleSpeaker(game, server,`time`, simbol, nickname, chanel, l
 
 cur.execute(sql)
 conn.commit()
+
